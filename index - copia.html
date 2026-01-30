@@ -156,16 +156,20 @@
 
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     <script>
-        const ESTUDIANTES_DB = {
-            '4810': 'Jordi Casals i Guiu', '4815': 'Laia Font i Soler',
-            '4820': 'Marc Rovira i Costa', '4825': 'Eulàlia Serra i Vernet',
-            '4830': 'Pau Martí i Bosch', '4835': 'Mireia Vilalta i Grau',
-            '4840': 'Andreu Camps i Ribes', '4845': 'Aina Torrent i Pagès'
-        };
-
+        const ESTUDIANTES_DB = { '4810': 'Jordi Casals i Guiu', '4815': 'Laia Font i Soler', '4820': 'Marc Rovira i Costa', '4825': 'Eulàlia Serra i Vernet', '4830': 'Pau Martí i Bosch', '4835': 'Mireia Vilalta i Grau', '4840': 'Andreu Camps i Ribes', '4845': 'Aina Torrent i Pagès' };
         let registrados = [];
         let html5QrcodeScanner = null;
-        const beep = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYIG2m98OScTgwOUKXh8bllHAU2jdXzzn0vBSR0yO/ekD8KFF+16OuoVBMKRp7f8r9vIQUsgs/y2Ik2CBtpvO/mnEwMDlCl4PG4Zh0GN43V88+ALwUkdMjv3pA/ChRftejrqVQUCkae3vK/cCEFLIHP8tmJNggcabzv5pxMDA5PpODxt2YdBjaN1fPPgC8FJHTc79+RPwkUX7Xo66hUFApGnt7yv3AhBSyCz/LZiTYIHGm87+acTAwOT6Tg8bhmHQY2jdXzz4AvBSR03O/fkT8JFF+16OuoVBQKRp7e8r9wIQUsgc/y2Yk2CBxpvO/mnEwMDk+k4PG4Zh0GNozV89CAMAUkdNzv35E/CRRftejrqFQUCkae3vK/cSEFLIHP8tmJNggcabzv5pxMDA5PpODxt2YdBjaN1fPPgC8FJHTY79+SPgkUX7Xo66hUFApGnt7yv3AhBSyCz/LZiTYIHGm77+acTAwOUKXg8bhlHQY2jdXzz4AvBSR02O/fkT4KE1+16OuoUxQLRp7e8r9wIQQtgc/y2Yk3CBtpu+/knEwMDlCl4PG3ZR0GNo3V88+ALwUjdNjv35E/ChNftejrqFMUC0We3vK/cCIELYHP8tmJNwgbabvv5JxMDA5QpeDxuGUdBzaM1fPQgC8FI3TY79+RPwoTX7Xo66hTFAtGnt7yv3AiBCyCz/LZiTcIG2m77+ScTAwOUKXg8bhlHQc2jdXzz38vBSN02O/fkT8KE1+16OuoUxQLRp7e8r9wIgUsgs/y2Yk3CBtpu+/knEwMDlCl4PG4ZR0HNozV88+ALwUjdNnv35E+ChNftejrqFMUC0ae3vK/cSIFLILP8tmJNwgbabvv5JxMDA5QpeDxuGUdBzaM1fPQgC8FI3TZ79+RPwoTX7Xo66hTFQtGnt7yv3AiBSyCz/LZiTcIG2m77+ScTAwOUKXg8bhlHQc2jdXzz4AvBSN02e/fkT4KE1+16OuoUxQLRp7e8r9xIgUsgs/y2Yk3CBtpu+/mnEwMDlCl4PG4ZR0GNozV89CALwUjdNrv35E/ChNftejrqFMVC0ae3vK/cCIFLILP8tmJNwgbabvv5pxMDA5QpeDxuGUdBjaN1fPPgC8FI3Ta79+RPgoTX7Xo66hTFAtGnt7yv3EiBSyCz/LZiTcIG2m77+acTAwOUKXg8bhlHQY2jNXzz4AvBSN02u/fkUAKE1+16OuoUxQLRp7e8r9xIgUsgs/y2Yk3CBtpu+/mnEwMDlCl4PG4ZR0GNozV88+ALwUjdNrv35FAChNftejrqFMUC0ae3vK/cSIFLILP8tmJNwgbabvv5pxMDA5QpeDxuGUdBjaN1fPPgC8FI3TbL9+RQAoTX7Xo66hTFAtGnt7yv3EiBSyCz/LZiTcIG2m77+acTAwOUKXg8bhlHQY2jdXzz4AvBSN02y/fkUAKE1+16OuoUxQLRp7e8r9xIgUsgs/y2Yk3CBtpu+/mnEwMDlCl4PG4ZR0GNozV88+ALwUjdNsv35FAChNftejrqFMUC0ae3vK/cSIFLILP8tmJNwgbabvv5pxMDA5QpeDxuGUdBjaN1fPPgC8FI3TbL9+RQAoTX7Xo66hTFAtGnt7yv3EiBSyCz/LZiTcIG2m77+acTAwOUKXg8bhlHQY2jdXzz4AvBSN02y/fkUAKE1+16OuoUxQLRp7e8r9xIgUsgs/y2Yk3CBtpu+/mnEwMDlCl4PG4ZR0GNozV88+ALwUjdNsv35FAChNftejrqFMUC0ae3vK/cSIFLILP8tmJNwgbabvv5pxMDA5QpeDxuGUdBjaN1fPPgC8FI3TbL9+RQAoTX7Xo66hTFAtGnt7yv3EiBSyCz/LZiTcIG2m77+acTAwOUKXg8bhlHQY2jdXzz4AvBSN02y/fkUAKE1+16OuoUxQLRp7e8r9xIgUsgs/y2Yk3CBtpu+/mnEwMDlCl4PG4ZR0GNo3V88+ALwUjdNsv35FAChNftejrqFMUC0ae3vK/cSIFLILP8tmJNwgbabvv5pxMDA5QpeDxuGUdBjaN1fPPgC8FI3TbL9+RQAoTX7Xo66hTFAtGnt7yv3EiBSyCz/LZiTcIG2m77+acTAwOUKXg8bhlHQY2jdXzz4AvBSN02y/fkUAKE1+16OuoUxQLRp7e8r9xIgUsgs/y2Yk3A=');
+        
+        // Audio Setup
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playBeep() {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            osc.type = "sine"; osc.frequency.value = 880;
+            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            osc.start(); osc.stop(audioCtx.currentTime + 0.1);
+        }
 
         const btnIniciar = document.getElementById('btn-iniciar');
         const btnDetener = document.getElementById('btn-detener');
@@ -177,8 +181,6 @@
         const modalExportar = document.getElementById('modal-exportar');
         const notificacion = document.getElementById('notificacion');
 
-        function playBeep() { beep.play().catch(() => {}); }
-        
         function init() {
             document.getElementById('fecha-actual').textContent = new Date().toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
             cargarDatos();
@@ -219,7 +221,7 @@
                 btnDetener.classList.remove('hidden');
         
             } catch (err) {
-                alert("Error de cámara: " + err);
+                alert("Error de cámara: " + err); // Use alert to see the error on iPhone
                 btnIniciar.disabled = false;
                 btnIniciar.textContent = "📷 Iniciar Escáner";
             }
@@ -291,44 +293,9 @@
             const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = document.getElementById('nombre-archivo').textContent; a.click();
         }
 
-        // COMPARTIR POR WHATSAPP CON ARCHIVO ADJUNTO - VERSION MEJORADA
-        async function compartirWhatsApp() {
-            const contenido = document.getElementById('contenido-archivo').textContent;
-            const nombreArchivo = document.getElementById('nombre-archivo').textContent;
-            const textoResumen = `📋 *Asistencia del ${new Date().toLocaleDateString()}*\n\nTotal presentes: ${registrados.length}\n\nSe adjunta el listado detallado.`;
-
-            // CAMBIO CLAVE: Verificar si el navegador soporta compartir archivos
-            const puedeCompartirArchivos = navigator.canShare && navigator.canShare({ files: [new File(['test'], 'test.txt', { type: 'text/plain' })] });
-
-            if (puedeCompartirArchivos) {
-                try {
-                    const file = new File([contenido], nombreArchivo, { type: 'text/plain' });
-                    
-                    await navigator.share({
-                        title: nombreArchivo,
-                        text: textoResumen,
-                        files: [file]
-                    });
-                    
-                    mostrarNotificacion('✅ Archivo compartido', 'success');
-                } catch (err) {
-                    if (err.name !== 'AbortError') { // Si no es que el usuario canceló
-                        console.error("Error al compartir archivo:", err);
-                        // Fallback a texto solamente
-                        compartirSoloTexto(textoResumen, contenido);
-                    }
-                }
-            } else {
-                // El navegador NO soporta compartir archivos
-                console.log("Este navegador no soporta compartir archivos");
-                compartirSoloTexto(textoResumen, contenido);
-            }
-        }
-
-        function compartirSoloTexto(textoResumen, contenido) {
-            const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(textoResumen + '\n\n' + contenido)}`;
-            window.open(url, '_blank');
-            mostrarNotificacion('📱 WhatsApp (Solo texto)', 'success');
+        function compartirWhatsApp() {
+            const msg = `📋 *Asistencia*\n\n${document.getElementById('contenido-archivo').textContent}`;
+            window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank');
         }
 
         init();
