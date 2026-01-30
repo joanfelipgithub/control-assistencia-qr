@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Control Asistencia">
@@ -35,32 +35,52 @@
             padding: 20px;
             margin-bottom: 20px;
             box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            text-align: center;
         }
         
-        /* CAMVIEW FIX: Viewfinder styling */
+        /* SCANNER WINDOW STYLING */
         #reader {
-            width: 100% !important;
             width: 100%;
             max-width: 400px;
             margin: 0 auto;
             border-radius: 12px;
             overflow: hidden;
             background: #000;
-            display: block;
+            position: relative; /* Needed for laser animation */
             border: 4px solid #667eea;
+            min-height: 250px;
         }
 
         #reader video {
             width: 100% !important;
             height: auto !important;
             object-fit: cover !important;
-            border-radius: 8px;
+        }
+
+        /* LASER ANIMATION EFFECT */
+        #reader:not(.hidden)::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: rgba(255, 0, 0, 0.7);
+            box-shadow: 0 0 15px 2px rgba(255, 0, 0, 0.8);
+            z-index: 10;
+            animation: scan 2s infinite linear;
+        }
+
+        @keyframes scan {
+            0% { top: 0%; }
+            50% { top: 100%; }
+            100% { top: 0%; }
         }
         
         .btn { width: 100%; padding: 16px; border: none; border-radius: 12px; font-size: 18px; font-weight: bold; cursor: pointer; transition: all 0.3s; margin-top: 15px; }
         .btn-primary { background: #25d366; color: white; }
         .btn-primary:active { transform: scale(0.98); background: #1da851; }
-        .btn:disabled { background: #ccc; cursor: not-allowed;transform: none;}
+        .btn:disabled { background: #ccc; cursor: not-allowed; transform: none; }
         .btn-secondary { background: #ff6b6b; color: white; }
         .hidden { display: none !important; }
         
@@ -139,6 +159,17 @@
         const ESTUDIANTES_DB = { '4810': 'Jordi Casals i Guiu', '4815': 'Laia Font i Soler', '4820': 'Marc Rovira i Costa', '4825': 'Eulàlia Serra i Vernet', '4830': 'Pau Martí i Bosch', '4835': 'Mireia Vilalta i Grau', '4840': 'Andreu Camps i Ribes', '4845': 'Aina Torrent i Pagès' };
         let registrados = [];
         let html5QrcodeScanner = null;
+        
+        // Audio Setup
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playBeep() {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            osc.type = "sine"; osc.frequency.value = 880;
+            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            osc.start(); osc.stop(audioCtx.currentTime + 0.1);
+        }
 
         const btnIniciar = document.getElementById('btn-iniciar');
         const btnDetener = document.getElementById('btn-detener');
@@ -148,6 +179,7 @@
         const btnLimpiar = document.getElementById('btn-limpiar');
         const btnExportar = document.getElementById('btn-exportar');
         const modalExportar = document.getElementById('modal-exportar');
+        const notificacion = document.getElementById('notificacion');
 
         function init() {
             document.getElementById('fecha-actual').textContent = new Date().toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
@@ -161,115 +193,78 @@
             if (datos) { registrados = JSON.parse(datos); actualizarLista(); }
         }
 
-// INICIAR ESCÁNER
-btnIniciar.addEventListener('click', async function() {
-    try {
-        btnIniciar.disabled = true;
-        
-        // Reset button state just in case
-        btnIniciar.textContent = "⌛ Cargando cámara...";
-        
-        html5QrcodeScanner = new Html5Qrcode("reader");
-        
-        await html5QrcodeScanner.start(
-            { facingMode: "environment" },
-            {
-                fps: 10,
-                qrbox: function(viewfinderWidth, viewfinderHeight) {
-                    let minEdge = Math.min(viewfinderWidth, viewfinderHeight);
-                    let size = Math.floor(minEdge * 0.7);
-                    return { width: size, height: size };
-                },
-                aspectRatio: 1.0 
-            },
-            onScanSuccess,
-            onScanError
-        );
-        
-        escaneoActivo = true;
-        
-        // UI Updates
-        reader.classList.remove('hidden');
-        btnIniciar.classList.add('hidden'); // Hide start button
-        btnDetener.classList.remove('hidden'); // Show stop button
-        
-        mostrarNotificacion('✅ Escáner iniciado', 'success');
-        
-        if (navigator.vibrate) navigator.vibrate(50);
-        
-    } catch (err) {
-        console.error('Error:', err);
-        mostrarNotificacion('❌ Error: ' + err.message, 'error');
-        // Reset button if it fails
-        btnIniciar.disabled = false;
-        btnIniciar.textContent = "📷 Iniciar Escáner";
-    }
-});
+        btnIniciar.addEventListener('click', async function() {
+            try {
+                btnIniciar.disabled = true;
+                btnIniciar.textContent = "⌛ Cargando cámara...";
+                
+                html5QrcodeScanner = new Html5Qrcode("reader");
+                
+                await html5QrcodeScanner.start(
+                    { facingMode: "environment" },
+                    {
+                        fps: 10,
+                        qrbox: (w, h) => {
+                            let size = Math.floor(Math.min(w, h) * 0.7);
+                            return { width: size, height: size };
+                        },
+                        aspectRatio: 1.0 
+                    },
+                    onScanSuccess,
+                    onScanError
+                );
+                
+                reader.classList.remove('hidden');
+                btnIniciar.classList.add('hidden');
+                btnDetener.classList.remove('hidden');
+                mostrarNotificacion('✅ Escáner listo', 'success');
+                if (navigator.vibrate) navigator.vibrate(50);
+            } catch (err) {
+                mostrarNotificacion('❌ Error: ' + err.message, 'error');
+                btnIniciar.disabled = false;
+                btnIniciar.textContent = "📷 Iniciar Escáner";
+            }
+        });
 
-        // DETENER ESCÁNER
         btnDetener.addEventListener('click', async function() {
             if (html5QrcodeScanner) {
                 try {
                     await html5QrcodeScanner.stop();
-                    escaneoActivo = false;
-            
-                    // 1. Hide the video box
                     reader.classList.add('hidden');
-            
-                    // 2. Switch button visibility
                     btnDetener.classList.add('hidden');
                     btnIniciar.classList.remove('hidden');
-            
-                    // 3. Reset the Start Button state
                     btnIniciar.disabled = false;
                     btnIniciar.textContent = "📷 Iniciar Escáner";
-            
-                    // Clean up the scanner instance to free memory on iPhone
                     html5QrcodeScanner = null;
-            
-                    mostrarNotificacion('⏹️ Escáner detenido', 'success');
-                } catch (err) {
-                    console.error("Error al detener:", err);
-                }
-            }
-        });
-
-        btnDetener.addEventListener('click', async () => {
-            try {
-                await html5QrcodeScanner.stop();
-        
-                // 1. Hide the reader container
-                reader.classList.add('hidden');
-        
-                // 2. Reset the START button appearance
-                // Assuming your original button color was green (#25d366)
-                btnIniciar.style.backgroundColor = "#25d366";
-                btnIniciar.textContent = "Iniciar Escaneo";
-        
-                // 3. Toggle visibility of buttons
-                btnIniciar.classList.remove('hidden');
-                btnDetener.classList.add('hidden');
-        
-                mostrarNotificacion('Scanner detenido');
-            } catch (err) {
-                console.error("Error al detener:", err);
+                    mostrarNotificacion('⏹️ Escáner detenido');
+                } catch (err) { console.error(err); }
             }
         });
 
         function onScanSuccess(decodedText) {
             const id = decodedText.trim();
-            if (!ESTUDIANTES_DB[id] || registrados.some(e => e.id === id)) return;
+            if (!ESTUDIANTES_DB[id]) return;
+            if (registrados.some(e => e.id === id)) {
+                mostrarNotificacion('⚠️ Estudiante ya registrado', 'error');
+                return;
+            }
+            
+            playBeep();
+            if (navigator.vibrate) navigator.vibrate(200);
+            
             registrados.push({ id, nombre: ESTUDIANTES_DB[id], timestamp: new Date().toLocaleTimeString() });
             guardarDatos(); actualizarLista(); actualizarStats();
-            if (navigator.vibrate) navigator.vibrate(100);
+            mostrarNotificacion(`✅ ${ESTUDIANTES_DB[id]} registrado`, 'success');
         }
+
+        function onScanError(err) { /* Silent ignore scanning attempts */ }
 
         function actualizarLista() {
             listaContainer.innerHTML = registrados.length ? '' : 'Escanea un código para empezar';
             registrados.forEach((est, i) => {
                 const div = document.createElement('div');
                 div.className = 'estudiante-item';
-                div.innerHTML = `<div><b>${est.nombre}</b><br><small>ID: ${est.id}</small></div><button class="btn-eliminar" onclick="eliminarEstudiante(${i})">×</button>`;
+                div.innerHTML = `<div><b>${est.nombre}</b><br><small>ID: ${est.id} | ${est.timestamp}</small></div><button class="btn-eliminar" onclick="eliminarEstudiante(${i})">×</button>`;
                 listaContainer.appendChild(div);
             });
             btnLimpiar.disabled = btnExportar.disabled = !registrados.length;
@@ -277,13 +272,17 @@ btnIniciar.addEventListener('click', async function() {
 
         function actualizarStats() { statPresentes.textContent = registrados.length; }
         function eliminarEstudiante(i) { registrados.splice(i, 1); guardarDatos(); actualizarLista(); actualizarStats(); }
-        
+        function mostrarNotificacion(msg, tipo = '') {
+            notificacion.textContent = msg;
+            notificacion.className = 'notificacion show ' + tipo;
+            setTimeout(() => notificacion.classList.remove('show'), 3000);
+        }
+
         btnLimpiar.addEventListener('click', () => { if(confirm('¿Limpiar lista?')) { registrados = []; guardarDatos(); actualizarLista(); actualizarStats(); }});
-        
         btnExportar.addEventListener('click', () => {
             const nombre = `Assist_${new Date().toISOString().slice(0,10)}.txt`;
             document.getElementById('nombre-archivo').textContent = nombre;
-            document.getElementById('contenido-archivo').textContent = registrados.map(e => e.id).join('\n');
+            document.getElementById('contenido-archivo').textContent = registrados.map(e => `${e.timestamp} - ${e.id} - ${e.nombre}`).join('\n');
             modalExportar.classList.add('show');
         });
 
