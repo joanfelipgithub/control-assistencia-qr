@@ -279,7 +279,7 @@
 
         btnLimpiar.addEventListener('click', () => { if(confirm('¿Limpiar lista?')) { registrados = []; guardarDatos(); actualizarLista(); actualizarStats(); }});
         btnExportar.addEventListener('click', () => {
-            const nombre = `Assist_${new Date().toISOString().slice(0,10)}.txt`;
+            const nombre = `Assist_${new Date().toISOString().slice(0,10)}_${new Date().toTimeString().slice(0,5).replace(':', '-')}.txt`;
             document.getElementById('nombre-archivo').textContent = nombre;
             document.getElementById('contenido-archivo').textContent = registrados.map(e => `${e.timestamp} - ${e.id} - ${e.nombre}`).join('\n');
             modalExportar.classList.add('show');
