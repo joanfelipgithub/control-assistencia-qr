@@ -2,194 +2,37 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tarjetas QR - Estudiantes</title>
+    <title>Generador de Tarjetas QR</title>
     <style>
-        @media print {
-            .no-print { display: none; }
-            .tarjeta { page-break-inside: avoid; }
-            body { background: white; }
-        }
-        
-        body {
-            font-family: Arial, sans-serif;
-            padding: 20px;
-            background: #f5f5f5;
-        }
-        
-        .controles {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        }
-        
-        .controles h1 {
-            color: #075e54;
-            margin-bottom: 15px;
-        }
-        
-        .btn {
-            padding: 12px 24px;
-            background: #25d366;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            margin-right: 10px;
-        }
-        
-        .btn:hover {
-            background: #1da851;
-        }
-        
-        .btn-secondary {
-            background: #075e54;
-        }
-        
-        .tarjetas-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 20px;
-            margin-top: 20px;
-        }
-        
-        .tarjeta {
-            background: white;
-            border: 2px solid #ddd;
-            border-radius: 12px;
-            padding: 20px;
-            text-align: center;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-            position: relative;
-        }
-        
-        .tarjeta-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 15px;
-            border-radius: 8px 8px 0 0;
-            margin: -20px -20px 15px -20px;
-        }
-        
-        .tarjeta-nombre {
-            font-size: 20px;
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
-        
-        .tarjeta-id {
-            font-size: 14px;
-            opacity: 0.9;
-        }
-        
-        .qr-container {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            margin: 15px 0;
-            display: inline-block;
-        }
-        
-        .qr-canvas {
-            border: 2px solid #eee;
-            border-radius: 4px;
-        }
-        
-        .instrucciones {
-            font-size: 12px;
-            color: #666;
-            margin-top: 10px;
-            padding: 10px;
-            background: #f9f9f9;
-            border-radius: 6px;
-        }
-        
-        .footer-tarjeta {
-            font-size: 10px;
-            color: #999;
-            margin-top: 10px;
-        }
-        
-        @media (max-width: 768px) {
-            .tarjetas-container {
-                grid-template-columns: 1fr;
-            }
-        }
+        @media print { .no-print { display: none; } }
+        body { font-family: sans-serif; background: #f5f5f5; padding: 20px; }
+        .tarjetas-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; }
+        .tarjeta { background: white; border: 1px solid #ccc; padding: 20px; text-align: center; border-radius: 8px; }
+        .btn { padding: 10px 20px; background: #25d366; color: white; border: none; border-radius: 4px; cursor: pointer; }
     </style>
 </head>
 <body>
-    <div class="controles no-print">
-        <h1>📱 Generador de Tarjetas QR - Control de Asistencia</h1>
-        <p>Tarjetas listas para imprimir. Cada estudiante tiene su código QR único.</p>
-        <button class="btn" onclick="window.print()">🖨️ Imprimir Tarjetas</button>
-        <button class="btn btn-secondary" onclick="descargarTodos()">⬇️ Descargar Todos los QR</button>
+    <div class="no-print" style="margin-bottom:20px;">
+        <button class="btn" onclick="window.print()">🖨️ Imprimir Todas</button>
     </div>
-    
-    <div class="tarjetas-container" id="tarjetas-container"></div>
+    <div class="tarjetas-container" id="container"></div>
 
-    <!-- Librería QR Code -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    
     <script>
-        // Base de datos de estudiantes
         const estudiantes = [
-            { id: '4810', nombre: 'Jordi Casals i Guiu' },
-            { id: '4815', nombre: 'Laia Font i Soler' },
-            { id: '4820', nombre: 'Marc Rovira i Costa' },
-            { id: '4825', nombre: 'Eulàlia Serra i Vernet' },
-            { id: '4830', nombre: 'Pau Martí i Bosch' },
-            { id: '4835', nombre: 'Mireia Vilalta i Grau' },
-            { id: '4840', nombre: 'Andreu Camps i Ribes' },
-            { id: '4845', nombre: 'Aina Torrent i Pagès' }
+            { id: '4810', nombre: 'Jordi Casals i Guiu' }, { id: '4815', nombre: 'Laia Font i Soler' },
+            { id: '4820', nombre: 'Marc Rovira i Costa' }, { id: '4825', nombre: 'Eulàlia Serra i Vernet' },
+            { id: '4830', nombre: 'Pau Martí i Bosch' }, { id: '4835', nombre: 'Mireia Vilalta i Grau' },
+            { id: '4840', nombre: 'Andreu Camps i Ribes' }, { id: '4845', nombre: 'Aina Torrent i Pagès' }
         ];
-        
-        // Generar tarjetas
-        const container = document.getElementById('tarjetas-container');
-        
-        estudiantes.forEach(estudiante => {
-            // Crear tarjeta
-            const tarjeta = document.createElement('div');
-            tarjeta.className = 'tarjeta';
-            tarjeta.innerHTML = `
-                <div class="tarjeta-header">
-                    <div class="tarjeta-nombre">${estudiante.nombre}</div>
-                    <div class="tarjeta-id">ID: ${estudiante.id}</div>
-                </div>
-                <div class="qr-container">
-                    <div id="qr-${estudiante.id}" class="qr-code"></div>
-                </div>
-                <div class="instrucciones">
-                    <strong>Instrucciones:</strong><br>
-                    Escanea este código al subir al autobús
-                </div>
-                <div class="footer-tarjeta">
-                    Control de Asistencia - ${new Date().getFullYear()}
-                </div>
-            `;
-            
-            container.appendChild(tarjeta);
-            
-            // Generar código QR
-            setTimeout(() => {
-                new QRCode(document.getElementById(`qr-${estudiante.id}`), {
-                    text: estudiante.id,
-                    width: 200,
-                    height: 200,
-                    colorDark: "#000000",
-                    colorLight: "#ffffff",
-                    correctLevel: QRCode.CorrectLevel.H
-                });
-            }, 100);
+
+        estudiantes.forEach(est => {
+            const div = document.createElement('div');
+            div.className = 'tarjeta';
+            div.innerHTML = `<h3>${est.nombre}</h3><p>ID: ${est.id}</p><div id="qr-${est.id}" style="display:inline-block"></div>`;
+            document.getElementById('container').appendChild(div);
+            new QRCode(document.getElementById(`qr-${est.id}`), { text: est.id, width: 150, height: 150 });
         });
-        
-        // Función para descargar todos los QR
-        function descargarTodos() {
-            alert('💡 Consejo: Para descargar individualmente, haz clic derecho en cada QR y selecciona "Guardar imagen como..."');
-        }
     </script>
 </body>
 </html>
