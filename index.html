@@ -293,9 +293,36 @@
             const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = document.getElementById('nombre-archivo').textContent; a.click();
         }
 
-        function compartirWhatsApp() {
-            const msg = `📋 *Asistencia*\n\n${document.getElementById('contenido-archivo').textContent}`;
-            window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank');
+// COMPARTIR POR WHATSAPP CON ARCHIVO ADJUNTO
+        async function compartirWhatsApp() {
+            const contenido = document.getElementById('contenido-archivo').textContent;
+            const nombreArchivo = document.getElementById('nombre-archivo').textContent;
+            const textoResumen = `📋 *Asistencia del ${new Date().toLocaleDateString()}*\n\nTotal presentes: ${registrados.length}\n\nSe adjunta el listado detallado.`;
+
+            // Verificamos si el navegador (como Safari en iPhone) permite compartir archivos
+            if (navigator.canShare && navigator.share) {
+                try {
+                    const file = new File([contenido], nombreArchivo, { type: 'text/plain' });
+                    
+                    await navigator.share({
+                        title: nombreArchivo,
+                        text: textoResumen,
+                        files: [file]
+                    });
+                    
+                    mostrarNotificacion('✅ Preparando envío...', 'success');
+                } catch (err) {
+                    // Si el usuario cancela o hay error, usamos el método tradicional de solo texto
+                    console.error("Error al compartir:", err);
+                    const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(textoResumen + '\n\n' + contenido)}`;
+                    window.open(url, '_blank');
+                }
+            } else {
+                // Fallback para navegadores que no soportan compartir archivos
+                const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(textoResumen + '\n\n' + contenido)}`;
+                window.open(url, '_blank');
+                mostrarNotificacion('📱 WhatsApp (Solo texto)', 'success');
+            }
         }
 
         init();
