@@ -196,10 +196,14 @@
         btnIniciar.addEventListener('click', async function() {
             try {
                 btnIniciar.disabled = true;
-                btnIniciar.textContent = "⌛ Cargando cámara...";
-                
+                btnIniciar.textContent = "⌛ Iniciando...";
+
+                // Force a 300ms delay to help iOS Safari "catch up" with the user gesture
+                await new Promise(r => setTimeout(r, 300));
+
                 html5QrcodeScanner = new Html5Qrcode("reader");
-                
+        
+                // Start the scanner
                 await html5QrcodeScanner.start(
                     { facingMode: "environment" },
                     {
@@ -207,20 +211,17 @@
                         qrbox: (w, h) => {
                             let size = Math.floor(Math.min(w, h) * 0.7);
                             return { width: size, height: size };
-                        },
-                        aspectRatio: 1.0 
+                        }
                     },
-                    onScanSuccess,
-                    onScanError
+                    onScanSuccess
                 );
-                
+
                 reader.classList.remove('hidden');
                 btnIniciar.classList.add('hidden');
                 btnDetener.classList.remove('hidden');
-                mostrarNotificacion('✅ Escáner listo', 'success');
-                if (navigator.vibrate) navigator.vibrate(50);
+        
             } catch (err) {
-                mostrarNotificacion('❌ Error: ' + err.message, 'error');
+                alert("Error de cámara: " + err); // Use alert to see the error on iPhone
                 btnIniciar.disabled = false;
                 btnIniciar.textContent = "📷 Iniciar Escáner";
             }
