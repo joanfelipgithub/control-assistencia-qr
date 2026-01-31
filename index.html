@@ -26,6 +26,7 @@
         .header { padding: 20px; background: rgba(0,0,0,0.3); text-align: center; backdrop-filter: blur(10px); }
         .header h1 { font-size: 24px; margin-bottom: 5px; }
         .header .fecha { font-size: 14px; opacity: 0.9; }
+        .header .device-id { font-size: 11px; opacity: 0.7; margin-top: 5px; font-family: monospace; }
         
         .main-content { flex: 1; padding: 20px; padding-bottom: 100px; overflow-y: auto; }
         
@@ -110,12 +111,18 @@
         .modal.show { display: flex; }
         .modal-content { background: white; padding: 25px; border-radius: 16px; max-width: 500px; width: 100%; color: #333; }
         .archivo-contenido { background: #eee; padding: 15px; border-radius: 8px; font-family: monospace; white-space: pre; margin: 15px 0; max-height: 200px; overflow-y: auto; }
+        
+        .setup-modal { background: white; color: #333; padding: 25px; border-radius: 16px; max-width: 400px; text-align: center; }
+        .setup-modal h2 { color: #667eea; margin-bottom: 15px; }
+        .setup-modal input { width: 100%; padding: 12px; margin: 10px 0; border: 2px solid #ddd; border-radius: 8px; font-size: 16px; }
+        .device-info { background: #f0f0f0; padding: 10px; border-radius: 8px; margin: 10px 0; font-size: 12px; }
     </style>
 </head>
 <body>
     <div class="header">
         <h1>📋 Control de Asistencia</h1>
         <div class="fecha" id="fecha-actual"></div>
+        <div class="device-id" id="device-id-display"></div>
     </div>
     
     <div class="main-content">
@@ -142,6 +149,17 @@
 
     <div class="notificacion" id="notificacion"></div>
 
+    <!-- Modal para configurar nombre de estudiante (primera vez) -->
+    <div class="modal" id="modal-setup">
+        <div class="setup-modal">
+            <h2>👋 Configuración Inicial</h2>
+            <p style="margin-bottom: 15px;">Introduce tu nombre para identificar este dispositivo:</p>
+            <input type="text" id="input-nombre-estudiante" placeholder="Ej: Jordi Casals" autocomplete="off">
+            <div class="device-info" id="device-info-preview"></div>
+            <button class="btn btn-primary" onclick="guardarNombreEstudiante()">✅ Guardar</button>
+        </div>
+    </div>
+
     <div class="modal" id="modal-exportar">
         <div class="modal-content">
             <h3 id="nombre-archivo"></h3>
@@ -163,26 +181,91 @@
             '4840': 'Andreu Camps i Ribes', '4845': 'Aina Torrent i Pagès'
         };
 
-        let registrados = [];
         let html5QrcodeScanner = null;
-        const beep = new Audio('data:audio/wav;base64,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');
-
+        let registrados = [];
+        const beep = new Audio('data:audio/wav;base64,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');
+        const reader = document.getElementById('reader');
         const btnIniciar = document.getElementById('btn-iniciar');
         const btnDetener = document.getElementById('btn-detener');
-        const reader = document.getElementById('reader');
         const listaContainer = document.getElementById('lista-estudiantes');
         const statPresentes = document.getElementById('stat-presentes');
         const btnLimpiar = document.getElementById('btn-limpiar');
         const btnExportar = document.getElementById('btn-exportar');
         const modalExportar = document.getElementById('modal-exportar');
+        const modalSetup = document.getElementById('modal-setup');
         const notificacion = document.getElementById('notificacion');
+
+        // DEVICE ID MANAGEMENT
+        function generarDeviceID() {
+            // Genera un ID único basado en múltiples factores del navegador
+            const navegadorInfo = navigator.userAgent + navigator.language + screen.width + screen.height;
+            let hash = 0;
+            for (let i = 0; i < navegadorInfo.length; i++) {
+                const char = navegadorInfo.charCodeAt(i);
+                hash = ((hash << 5) - hash) + char;
+                hash = hash & hash;
+            }
+            
+            // Combina con timestamp y random para mayor unicidad
+            const timestamp = Date.now().toString(36);
+            const random = Math.random().toString(36).substr(2, 5);
+            return `D${Math.abs(hash).toString(36).substr(0, 4)}-${timestamp.substr(-4)}${random}`.toUpperCase();
+        }
+
+        function obtenerDeviceID() {
+            let deviceID = localStorage.getItem('device-id');
+            if (!deviceID) {
+                deviceID = generarDeviceID();
+                localStorage.setItem('device-id', deviceID);
+            }
+            return deviceID;
+        }
+
+        function obtenerNombreEstudiante() {
+            return localStorage.getItem('student-name') || null;
+        }
+
+        function guardarNombreEstudiante() {
+            const nombre = document.getElementById('input-nombre-estudiante').value.trim();
+            if (!nombre) {
+                alert('Por favor introduce tu nombre');
+                return;
+            }
+            
+            localStorage.setItem('student-name', nombre);
+            modalSetup.classList.remove('show');
+            actualizarDisplayDeviceID();
+            mostrarNotificacion('✅ Dispositivo configurado: ' + nombre, 'success');
+        }
+
+        function actualizarDisplayDeviceID() {
+            const deviceID = obtenerDeviceID();
+            const nombreEstudiante = obtenerNombreEstudiante();
+            const displayElement = document.getElementById('device-id-display');
+            
+            if (nombreEstudiante) {
+                displayElement.textContent = `📱 ${nombreEstudiante} (ID: ${deviceID})`;
+            } else {
+                displayElement.textContent = `📱 ID: ${deviceID}`;
+            }
+        }
+
+        function mostrarSetupSiNecesario() {
+            if (!obtenerNombreEstudiante()) {
+                const deviceID = obtenerDeviceID();
+                document.getElementById('device-info-preview').textContent = `ID de dispositivo: ${deviceID}`;
+                modalSetup.classList.add('show');
+            }
+        }
 
         function playBeep() { beep.play().catch(() => {}); }
         
         function init() {
             document.getElementById('fecha-actual').textContent = new Date().toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+            actualizarDisplayDeviceID();
             cargarDatos();
             actualizarStats();
+            mostrarSetupSiNecesario();
         }
 
         function guardarDatos() { localStorage.setItem('asistencia-registrados', JSON.stringify(registrados)); }
@@ -278,24 +361,57 @@
         }
 
         btnLimpiar.addEventListener('click', () => { if(confirm('¿Limpiar lista?')) { registrados = []; guardarDatos(); actualizarLista(); actualizarStats(); }});
+        
         btnExportar.addEventListener('click', () => {
-            const nombre = `Assist_${new Date().toISOString().slice(0,10)}_${new Date().toTimeString().slice(0,5).replace(':', '-')}.txt`;
-            document.getElementById('nombre-archivo').textContent = nombre;
-            document.getElementById('contenido-archivo').textContent = registrados.map(e => `${e.timestamp} - ${e.id} - ${e.nombre}`).join('\n');
+            const deviceID = obtenerDeviceID();
+            const nombreEstudiante = obtenerNombreEstudiante() || 'Unknown';
+            const fecha = new Date();
+            const fechaStr = fecha.toISOString().slice(0,10);
+            const horaStr = fecha.toTimeString().slice(0,5).replace(':', '-');
+            
+            // Nuevo formato de nombre: Assist_DEVICEID_NOMBRE_FECHA_HORA.txt
+            const nombreArchivo = `Assist_${deviceID}_${nombreEstudiante.replace(/\s+/g, '-')}_${fechaStr}_${horaStr}.txt`;
+            
+            // Incluir información del dispositivo en el contenido del archivo
+            const headerInfo = `===========================================
+CONTROL DE ASISTENCIA
+===========================================
+Fecha: ${fecha.toLocaleDateString('es-ES')}
+Hora: ${fecha.toLocaleTimeString('es-ES')}
+Dispositivo: ${deviceID}
+Responsable: ${nombreEstudiante}
+Total Presentes: ${registrados.length}
+===========================================
+
+LISTADO DE ASISTENCIA:
+-------------------------------------------
+`;
+            
+            const contenidoLista = registrados.map(e => `${e.timestamp} - ${e.id} - ${e.nombre}`).join('\n');
+            const contenidoCompleto = headerInfo + contenidoLista;
+            
+            document.getElementById('nombre-archivo').textContent = nombreArchivo;
+            document.getElementById('contenido-archivo').textContent = contenidoCompleto;
             modalExportar.classList.add('show');
         });
 
         function cerrarModal() { modalExportar.classList.remove('show'); }
+        
         function descargarArchivo() {
             const blob = new Blob([document.getElementById('contenido-archivo').textContent], {type:'text/plain'});
-            const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = document.getElementById('nombre-archivo').textContent; a.click();
+            const a = document.createElement('a'); 
+            a.href = URL.createObjectURL(blob); 
+            a.download = document.getElementById('nombre-archivo').textContent; 
+            a.click();
         }
 
         // COMPARTIR POR WHATSAPP CON ARCHIVO ADJUNTO - VERSION MEJORADA
         async function compartirWhatsApp() {
             const contenido = document.getElementById('contenido-archivo').textContent;
             const nombreArchivo = document.getElementById('nombre-archivo').textContent;
-            const textoResumen = `📋 *Asistencia del ${new Date().toLocaleDateString()}*\n\nTotal presentes: ${registrados.length}\n\nSe adjunta el listado detallado.`;
+            const deviceID = obtenerDeviceID();
+            const nombreEstudiante = obtenerNombreEstudiante() || 'Usuario';
+            const textoResumen = `📋 *Asistencia - ${nombreEstudiante}*\n📱 Dispositivo: ${deviceID}\n📅 ${new Date().toLocaleDateString()}\n\nTotal presentes: ${registrados.length}\n\nSe adjunta el listado detallado.`;
 
             // CAMBIO CLAVE: Verificar si el navegador soporta compartir archivos
             const puedeCompartirArchivos = navigator.canShare && navigator.canShare({ files: [new File(['test'], 'test.txt', { type: 'text/plain' })] });
